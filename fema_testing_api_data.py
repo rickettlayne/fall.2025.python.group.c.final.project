@@ -4,11 +4,9 @@ import pandas as pd
 # FEMA API endpoint (open access)
 url = "https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries"
 
-# Parameters: limit to first 100000 records and request JSON format
-# Data as of today 2025-11-24 is around 69000 records
-
+# Parameters: limit to first 1000 records and request JSON format
 params = {
-    "$top": 100000,
+    "$top": 1000,
     "$format": "json"
 }
 
@@ -30,9 +28,6 @@ try:
         print(df.head(10))
 
         # Save full dataset to CSV
-        # State code is in "state" column C
-        # Year is in "declarationDate" column E
-
         df.to_csv("fema_disaster_declarations_sample.csv", index=False)
         print("\nData saved to 'fema_disaster_declarations_sample.csv'")
 

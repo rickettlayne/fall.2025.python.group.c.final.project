@@ -1,35 +1,25 @@
-
-
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
 url = "https://www.nerdwallet.com/best/insurance/homeowners/home-insurance-rates"
 
-# Spoof a real browser
 headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15"
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_3) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/16.4 Safari/605.1.15"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Referer": "https://www.google.com"
 }
 
 response = requests.get(url, headers=headers)
-response.raise_for_status()
 
-soup = BeautifulSoup(response.text, "html.parser")
+print("Status code:", response.status_code)
+print("Final URL:", response.url)
 
-# Find all tables
-tables = pd.read_html(str(soup))
-
-print(f"✅ Found {len(tables)} tables.")
-
-# Preview and save the likely correct one
-for i, table in enumerate(tables):
-    print(f"\nTable {i} preview:")
-    print(table.head())
-
-# Save the first (or appropriate) table
-if tables:
-    df = tables[0]
-    df.to_csv("nerdwallet_home_insurance.csv", index=False)
-    print("\n✅ Table saved as 'nerdwallet_home_insurance.csv'")
-else:
-    print("❌ No tables found.")
+if response.status_code != 200:
+    print(response.text[:1000])
+    raise SystemExit("Server did not return 200, scraping blocked")
