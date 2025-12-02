@@ -4,9 +4,9 @@ import pandas as pd
 # FEMA API endpoint (open access)
 url = "https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries"
 
-# Parameters: limit to first 1000 records and request JSON format
+# Parameters: limit to first 100000 records and request JSON format
 params = {
-    "$top": 1000,
+    "$top": 100000,
     "$format": "json"
 }
 
