@@ -1,6 +1,7 @@
 import csv
 import urllib.request
 from urllib.error import URLError, HTTPError
+# rix test
 
 # Set up the request parameters
 base_url = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/'
