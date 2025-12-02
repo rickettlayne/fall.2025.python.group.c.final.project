@@ -1,3 +1,10 @@
+# extractor_weather_fema.py
+# This script fetches weather disaster data from the FEMA API,
+# processes it into a pandas DataFrame, and saves it as a CSV file.
+# The script also prints the column names and the first 10 rows of the dataset.
+# The FEMA API provides open access to disaster declaration summaries.
+# The output CSV file is named 'fema_disaster_declarations.csv'.
+
 import requests
 import pandas as pd
 
@@ -9,6 +16,11 @@ params = {
     "$top": 100000,
     "$format": "json"
 }
+
+# Fetch data from FEMA API
+# Process the JSON response into a pandas DataFrame
+# Print column names and first 10 rows
+# Save the full dataset to a CSV file
 
 try:
     print("Fetching FEMA Disaster Declarations Summary data...")
@@ -33,6 +45,13 @@ try:
 
     else:
         print(f"Failed to fetch data. Status code: {response.status_code}")
+
+# Handle exceptions during the request
+# Print error message on failure
+# Save the dataset only on successful fetch
+# Catch any other exceptions and print error message
+# This ensures robust error handling during data extraction
+
 
 except Exception as e:
     print(f"An error occurred: {e}")

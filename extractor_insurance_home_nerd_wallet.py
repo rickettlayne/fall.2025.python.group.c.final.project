@@ -13,11 +13,20 @@ Output:
         avg_monthly_usd
         source_year
 """
+# extractor_insurance_home_nerd.py
+# This script downloads an HTML page from NerdWallet,
+# extracts a table of average home insurance costs by state,
+# and saves the data for years 2018-2022 as a CSV file.
 
 import os
 import requests
 import certifi
 import pandas as pd
+
+# URL of the NerdWallet home insurance article
+# containing the state cost table
+# NerdWallet may block requests without a proper User-Agent header
+# so we set that in the request headers
 
 NERDWALLET_URL = (
     "https://www.nerdwallet.com/insurance/homeowners/learn/average-homeowners-insurance-cost"
@@ -28,6 +37,10 @@ OUTPUT_FILE = os.path.join(
     SCRIPT_DIR, "nerdwallet_home_insurance_by_state_2018_2022.csv"
 )
 
+# Function to download NerdWallet HTML page
+# and return it as text
+# Raises an exception on failure
+# Returns the HTML content as a string
 
 def fetch_nerdwallet_html() -> str:
     """Download the NerdWallet article HTML and return it as text."""
@@ -50,6 +63,10 @@ def fetch_nerdwallet_html() -> str:
     print(f"Got response, status {resp.status_code}, length {len(resp.text)} bytes")
     return resp.text
 
+# Function to extract the state cost table from the HTML
+# using pandas.read_html
+# Returns the extracted table as a DataFrame
+# Raises an exception on failure
 
 def extract_state_table(html: str) -> pd.DataFrame:
     """Find the state level table using pandas.read_html."""
@@ -76,6 +93,9 @@ def extract_state_table(html: str) -> pd.DataFrame:
 
     return target_df
 
+# Function to clean the extracted table
+# and prepare it for saving
+# Returns the cleaned DataFrame
 
 def clean_state_table(df: pd.DataFrame) -> pd.DataFrame:
     """Clean the raw table into state, avg_annual_usd, avg_monthly_usd."""
@@ -112,6 +132,13 @@ def clean_state_table(df: pd.DataFrame) -> pd.DataFrame:
     print(f"Cleaned table has {len(df)} rows")
     return df
 
+# Main execution
+# Download HTML, extract state table, clean it,
+# build panel for years 2018-2022, and save as CSV
+# Each year is a separate row with source_year column
+# The CSV file is saved in the same folder as this script   
+# The output file is nerdwallet_home_insurance_by_state_2018_2022.csv
+
 
 def main():
     try:
@@ -134,6 +161,12 @@ def main():
         print("Error while processing NerdWallet data:")
         print(e)
 
+# Main execution
+# Download HTML, extract state table, clean it,
+# build panel for years 2018-2022, and save as CSV
+# Each year is a separate row with source_year column
+# The CSV file is saved in the same folder as this script
+# The output file is nerdwallet_home_insurance_by_state_2018_2022.csv
 
 if __name__ == "__main__":
     main()
