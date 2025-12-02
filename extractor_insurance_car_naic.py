@@ -2,6 +2,8 @@
 # This script downloads a PDF from the NAIC website, extracts text,
 # parses tables of average car insurance premiums by state and year,
 # and saves each table as a separate CSV file.
+# Each table is saved in the same folder as this script.
+
 
 import requests
 import io
