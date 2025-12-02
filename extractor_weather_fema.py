@@ -28,8 +28,8 @@ try:
         print(df.head(10))
 
         # Save full dataset to CSV
-        df.to_csv("fema_disaster_declarations_sample.csv", index=False)
-        print("\nData saved to 'fema_disaster_declarations_sample.csv'")
+        df.to_csv("fema_disaster_declarations.csv", index=False)
+        print("\nData saved to 'fema_disaster_declarations.csv'")
 
     else:
         print(f"Failed to fetch data. Status code: {response.status_code}")
