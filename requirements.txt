@@ -1,1 +1,27 @@
 django>=5.0,<6.0
+
+# Data analysis + cleaning
+pandas
+numpy
+python-dateutil
+pytz
+tzdata
+
+# API requests + SSL
+requests
+certifi
+
+# PDF extraction
+pypdf
+
+# HTML table parsing (required for NerdWallet scraper)
+lxml
+
+# Visualization (interactive charts in Django)
+plotly
+kaleido
+
+# Optional but recommended for mapping and geospatial analysis
+geopandas
+shapely
+pyproj
