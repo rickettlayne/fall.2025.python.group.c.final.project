@@ -1,49 +1,36 @@
-"""
-nerd_wallet_home_insurance_testing_api.py
-
-Purpose:
-    Scrape NerdWallet home insurance state table once
-    and build a panel with years twenty eighteen through twenty twenty two.
-
-Output:
-    CSV file nerdwallet_home_insurance_by_state_2018_2022.csv
-    columns:
-        state
-        avg_annual_usd
-        avg_monthly_usd
-        source_year
-"""
 # extractor_insurance_home_nerd.py
-# This script downloads an HTML page from NerdWallet,
-# extracts a table of average home insurance costs by state,
-# and saves the data for years 2018-2022 as a CSV file.
+# Scrapes NerdWallet's home insurance table, cleans the data,
+# generates year panels (2018-2022), and saves output to /data folder.
 
 import os
 import requests
 import certifi
 import pandas as pd
 
-# URL of the NerdWallet home insurance article
-# containing the state cost table
-# NerdWallet may block requests without a proper User-Agent header
-# so we set that in the request headers
+# ---------------------------------------------------
+# Locate project root and /data folder
+# ---------------------------------------------------
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
+# Ensure /data exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Output CSV file
+OUTPUT_FILE = os.path.join(DATA_DIR, "nerdwallet_home.csv")
+
+# NerdWallet article URL
 NERDWALLET_URL = (
     "https://www.nerdwallet.com/insurance/homeowners/learn/average-homeowners-insurance-cost"
 )
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_FILE = os.path.join(
-    SCRIPT_DIR, "nerdwallet_home_insurance_by_state_2018_2022.csv"
-)
-
-# Function to download NerdWallet HTML page
-# and return it as text
-# Raises an exception on failure
-# Returns the HTML content as a string
-
+# ---------------------------------------------------
+# Download HTML from NerdWallet
+# ---------------------------------------------------
 def fetch_nerdwallet_html() -> str:
-    """Download the NerdWallet article HTML and return it as text."""
+    """Download the NerdWallet HTML article as text."""
+
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -60,49 +47,49 @@ def fetch_nerdwallet_html() -> str:
         verify=certifi.where(),
     )
     resp.raise_for_status()
-    print(f"Got response, status {resp.status_code}, length {len(resp.text)} bytes")
+
+    print(f"Got response: status {resp.status_code}, HTML size {len(resp.text)} bytes")
     return resp.text
 
-# Function to extract the state cost table from the HTML
-# using pandas.read_html
-# Returns the extracted table as a DataFrame
-# Raises an exception on failure
-
+# ---------------------------------------------------
+# Extract the state-level table from the HTML
+# ---------------------------------------------------
 def extract_state_table(html: str) -> pd.DataFrame:
-    """Find the state level table using pandas.read_html."""
-    print("Parsing HTML tables with pandas.read_html")
+    """Extract state cost table using pandas.read_html."""
+    print("Parsing HTML tables with pandas.read_html()...")
     tables = pd.read_html(html)
-    print(f"Found {len(tables)} tables on the page")
+    print(f"Found {len(tables)} tables in the article")
 
     target_df = None
 
     for idx, df in enumerate(tables):
-        cols_lower = [str(c).strip().lower() for c in df.columns]
-        print(f"Table {idx} columns: {cols_lower}")
+        cols = [str(c).strip().lower() for c in df.columns]
+        print(f"Table {idx} columns: {cols}")
+
         if (
-            "state" in cols_lower
-            and "average annual cost" in cols_lower
-            and "average monthly cost" in cols_lower
+            "state" in cols
+            and "average annual cost" in cols
+            and "average monthly cost" in cols
         ):
             target_df = df
-            print(f"Selected table {idx} as the state cost table")
+            print(f"Identified table {idx} as the state-level cost table")
             break
 
     if target_df is None:
-        raise RuntimeError("Could not find state cost table in NerdWallet HTML")
+        raise RuntimeError("Could not locate NerdWallet state table")
 
     return target_df
 
-# Function to clean the extracted table
-# and prepare it for saving
-# Returns the cleaned DataFrame
-
+# ---------------------------------------------------
+# Clean the extracted table into uniform column names
+# ---------------------------------------------------
 def clean_state_table(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean the raw table into state, avg_annual_usd, avg_monthly_usd."""
+    """Clean and normalize the state table columns."""
 
     rename_map = {}
     for col in df.columns:
         col_lower = str(col).strip().lower()
+
         if col_lower == "state":
             rename_map[col] = "state"
         elif "average annual" in col_lower:
@@ -112,12 +99,13 @@ def clean_state_table(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.rename(columns=rename_map)
 
-    needed_cols = ["state", "avg_annual_usd", "avg_monthly_usd"]
-    df = df[[c for c in needed_cols if c in df.columns]]
+    needed = ["state", "avg_annual_usd", "avg_monthly_usd"]
+    df = df[[c for c in needed if c in df.columns]]
 
+    # Remove nationwide averages
     df = df[df["state"].astype(str).str.lower() != "national average"]
-    df["state"] = df["state"].astype(str).str.strip()
 
+    # Clean numeric fields
     for col in ["avg_annual_usd", "avg_monthly_usd"]:
         if col in df.columns:
             df[col] = (
@@ -129,24 +117,20 @@ def clean_state_table(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df = df.dropna(subset=["state"]).reset_index(drop=True)
-    print(f"Cleaned table has {len(df)} rows")
+    print(f"Cleaned table contains {len(df)} rows")
+
     return df
 
-# Main execution
-# Download HTML, extract state table, clean it,
-# build panel for years 2018-2022, and save as CSV
-# Each year is a separate row with source_year column
-# The CSV file is saved in the same folder as this script   
-# The output file is nerdwallet_home_insurance_by_state_2018_2022.csv
-
-
+# ---------------------------------------------------
+# Main logic
+# ---------------------------------------------------
 def main():
     try:
         html = fetch_nerdwallet_html()
         base_table = clean_state_table(extract_state_table(html))
 
         all_years = []
-        for year in range(2018, 2023):  # twenty eighteen through twenty twenty two
+        for year in range(2018, 2023):  # 2018 through 2022
             df_year = base_table.copy()
             df_year["source_year"] = year
             all_years.append(df_year)
@@ -154,19 +138,15 @@ def main():
         combined = pd.concat(all_years, ignore_index=True)
 
         combined.to_csv(OUTPUT_FILE, index=False)
-        print(f"Wrote combined data to {OUTPUT_FILE}")
+        print(f"\nSaved NerdWallet home insurance data to: {OUTPUT_FILE}")
         print(combined.head())
 
     except Exception as e:
-        print("Error while processing NerdWallet data:")
+        print("\nError while processing NerdWallet data:")
         print(e)
 
-# Main execution
-# Download HTML, extract state table, clean it,
-# build panel for years 2018-2022, and save as CSV
-# Each year is a separate row with source_year column
-# The CSV file is saved in the same folder as this script
-# The output file is nerdwallet_home_insurance_by_state_2018_2022.csv
-
+# ---------------------------------------------------
+# Execute
+# ---------------------------------------------------
 if __name__ == "__main__":
     main()
