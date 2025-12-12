@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Weather & Insurance Dashboard</title>
-    <!-- Simple Bootstrap from CDN to make it look nice -->
+
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
     >
+
     <style>
         body {
             background-color: #f5f7fb;
@@ -34,56 +35,71 @@
         }
     </style>
 </head>
+
 <body>
 <div class="container-fluid">
     <div class="row">
+
         <!-- Sidebar / Filters -->
         <div class="col-md-3 sidebar">
-            <h2>Filters (Coming Soon)</h2>
+            <h2>Filters</h2>
 
-            <div class="mb-3">
-                <label class="form-label">Location</label>
-                <input type="text" class="form-control" placeholder="City / ZIP (placeholder)">
-            </div>
+            <form method="get">
 
-            <div class="mb-3">
-                <label class="form-label">Weather Event</label>
-                <select class="form-select">
-                    <option>All</option>
-                    <option>Storm</option>
-                    <option>Flood</option>
-                    <option>Hail</option>
-                    <option>Wildfire</option>
-                </select>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Year</label>
+                    <select class="form-select" name="year" onchange="this.form.submit()">
+                        {% for year in years %}
+                            <option value="{{ year }}"
+                                {% if year == selected_year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Date Range</label>
-                <input type="text" class="form-control" placeholder="Date range (placeholder)">
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">State</label>
+                    <select class="form-select" name="state" onchange="this.form.submit()">
+                        {% for s in states %}
+                            <option value="{{ s }}"
+                                {% if s == selected_state %}selected{% endif %}>
+                                {{ s }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <button class="btn btn-light w-100 mt-2" disabled>
-                Apply Filters (API later)
-            </button>
+                <div class="mb-3">
+                    <label class="form-label">Weather Event</label>
+                    <select class="form-select" disabled>
+                        <option>All</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-light w-100 mt-2" disabled>
+                    Additional filters coming
+                </button>
+
+            </form>
         </div>
 
         <!-- Main Dashboard Area -->
         <div class="col-md-9 p-4">
             <h1 class="main-title">Weather & Insurance Dashboard</h1>
             <p class="text-muted">
-                This is the prototype Django app for Group C. 
-                Live data & charts will be added after API integration.
+                Prototype Django dashboard using cleaned and normalized datasets.
             </p>
 
             <!-- Top Summary Cards -->
             <div class="row gy-3 mt-2">
+
                 <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Current Weather (Placeholder)</h5>
-                            <p class="card-text mb-1">Temperature: 25°C</p>
-                            <p class="card-text mb-1">Condition: Clear</p>
-                            <p class="card-text mb-0"><small class="text-muted">Data from API will go here.</small></p>
+                            <h5 class="card-title">Current Weather</h5>
+                            <p class="card-text mb-1">Placeholder</p>
+                            <small class="text-muted">API integration later</small>
                         </div>
                     </div>
                 </div>
@@ -91,11 +107,9 @@
                 <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Risk Score (Placeholder)</h5>
+                            <h5 class="card-title">Risk Score</h5>
                             <p class="display-6 mb-0">Medium</p>
-                            <p class="card-text">
-                                <small class="text-muted">Calculated from weather + insurance data.</small>
-                            </p>
+                            <small class="text-muted">Derived from weather and insurance</small>
                         </div>
                     </div>
                 </div>
@@ -103,27 +117,40 @@
                 <div class="col-md-4">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Insurance Summary (Placeholder)</h5>
+                            <h5 class="card-title">Insurance Summary</h5>
                             <ul class="mb-0">
-                                <li>Suggested premium range</li>
-                                <li>Risk category</li>
-                                <li>Recommendation text</li>
+                                {% for year, value in year_avgs.items %}
+                                    <li>{{ year }} National Avg: ${{ value }}</li>
+                                {% endfor %}
                             </ul>
                         </div>
                     </div>
                 </div>
+
             </div>
 
-            <!-- Bottom Section: Charts / Tables Placeholder -->
+            <!-- Data Preview -->
+            <div class="row gy-3 mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">NAIC Auto Insurance Data Preview</h5>
+                            <p class="text-muted">
+                                Cleaned premium data by state and year.
+                            </p>
+                            {{ naic_preview|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholders -->
             <div class="row gy-3 mt-4">
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Weather Trend Chart</h5>
-                            <p class="card-text">
-                                Placeholder area for a line chart showing temperature / rainfall over time.
-                                Chart library (e.g., Chart.js) will be integrated later.
-                            </p>
+                            <h5 class="card-title">National Insurance Premium Trend</h5>
+                            {{ trend_chart|safe }}
                         </div>
                     </div>
                 </div>
@@ -131,19 +158,15 @@
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Claims / Losses Table</h5>
-                            <p class="card-text">
-                                Placeholder for table summarizing historical insurance events linked with weather.
-                                Data will come from FEMA / insurance datasets.
-                            </p>
+                            <h5 class="card-title">Claims and Losses</h5>
+                            <p class="card-text">Next phase</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-        </div> <!-- /main col -->
-    </div> <!-- /row -->
-</div> <!-- /container -->
-
+        </div>
+    </div>
+</div>
 </body>
 </html>
