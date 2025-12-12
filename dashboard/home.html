@@ -144,25 +144,33 @@
                 </div>
             </div>
 
-            <!-- Placeholders -->
+            <!-- Charts Section -->
             <div class="row gy-3 mt-4">
+
+                <!-- Trend Chart -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">National Insurance Premium Trend</h5>
+                            <h5 class="card-title">
+                                State vs National Insurance Premium Trend
+                            </h5>
                             {{ trend_chart|safe }}
                         </div>
                     </div>
                 </div>
 
+                <!-- State Comparison Bar Chart -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Claims and Losses</h5>
-                            <p class="card-text">Next phase</p>
+                            <h5 class="card-title">
+                                State Comparison – {{ selected_year }}
+                            </h5>
+                            {{ state_bar_chart|safe }}
                         </div>
                     </div>
                 </div>
+
             </div>
 
         </div>

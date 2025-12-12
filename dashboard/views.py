@@ -27,43 +27,63 @@ def home(request):
     selected_year = int(request.GET.get("year", years[-1]))
 
     # ---------------------------------------------------
-    # Compute national averages by year
+    # NATIONAL vs STATE TREND (line chart)
     # ---------------------------------------------------
-    year_avgs = {}
-    for year in years:
-        col = f"avg_{year}"
-        if col in df.columns:
-            year_avgs[year] = round(df[col].mean(), 2)
+    national_trend = [df[f"avg_{y}"].mean() for y in years]
 
-    # ---------------------------------------------------
-    # Build national trend dataframe
-    # ---------------------------------------------------
+    state_row = df[df["state"] == selected_state].iloc[0]
+    state_trend = [state_row[f"avg_{y}"] for y in years]
+
     trend_df = pd.DataFrame({
-        "Year": list(year_avgs.keys()),
-        "Average Premium": list(year_avgs.values())
+        "Year": years + years,
+        "Average Premium": state_trend + national_trend,
+        "Type": [selected_state] * len(years) + ["National Avg"] * len(years)
     })
 
-    # ---------------------------------------------------
-    # Create Plotly line chart
-    # ---------------------------------------------------
-    fig = px.line(
+    trend_fig = px.line(
         trend_df,
         x="Year",
         y="Average Premium",
+        color="Type",
         markers=True,
-        title="National Average Auto Insurance Premium Trend"
+        title=f"{selected_state} vs National Auto Insurance Premium Trend"
     )
 
-    fig.update_layout(
+    trend_fig.update_layout(
         yaxis_title="Average Premium (USD)",
         xaxis_title="Year",
+        template="plotly_white",
+        legend_title_text=""
+    )
+
+    trend_chart = trend_fig.to_html(full_html=False)
+
+    # ---------------------------------------------------
+    # STATE COMPARISON BAR CHART (selected year)
+    # ---------------------------------------------------
+    year_col = f"avg_{selected_year}"
+
+    bar_df = df[["state", year_col]].rename(
+        columns={year_col: "Average Premium"}
+    )
+
+    bar_fig = px.bar(
+        bar_df,
+        x="state",
+        y="Average Premium",
+        title=f"Auto Insurance Premiums by State ({selected_year})"
+    )
+
+    bar_fig.update_layout(
+        xaxis_title="State",
+        yaxis_title="Average Premium (USD)",
         template="plotly_white"
     )
 
-    trend_chart = fig.to_html(full_html=False)
+    state_bar_chart = bar_fig.to_html(full_html=False)
 
     # ---------------------------------------------------
-    # Prepare table for display
+    # TABLE PREVIEW (rename avg_YYYY -> YYYY)
     # ---------------------------------------------------
     rename_map = {f"avg_{y}": str(y) for y in years}
     display_df = df.rename(columns=rename_map)
@@ -75,16 +95,16 @@ def home(request):
     )
 
     # ---------------------------------------------------
-    # Context
+    # CONTEXT
     # ---------------------------------------------------
     context = {
         "states": states,
         "years": years,
         "selected_state": selected_state,
         "selected_year": selected_year,
-        "year_avgs": year_avgs,
         "naic_preview": table_html,
-        "trend_chart": trend_chart
+        "trend_chart": trend_chart,
+        "state_bar_chart": state_bar_chart
     }
 
     return render(request, "home.html", context)
