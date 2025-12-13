@@ -1,11 +1,35 @@
+Weather and Insurance Risk Dashboard
+===================================
+
+This project is a Django based interactive dashboard that analyzes the relationship between
+U.S. insurance premiums and federally declared disaster activity. The application supports
+both Auto and Home insurance views and integrates FEMA disaster data to compute a composite
+risk score by state.
+
+The dashboard is designed to help users understand how insurance costs vary by geography,
+time, and disaster exposure.
+
+--------------------------------------------------
+Key Features
+--------------------------------------------------
+
+• Auto insurance analysis with multi year trends from 2018 through 2022  
+• Home insurance analysis as a single year national snapshot  
+• FEMA disaster integration by state and year  
+• Composite risk score combining premium pressure and disaster frequency  
+• Interactive filters for insurance type, state, and year  
+• Choropleth map visualizing relative risk by state  
+• Indexed trend charts for fair comparison over time  
+
+--------------------------------------------------
 Project Structure
-The repository is organized as follows:
+--------------------------------------------------
+
 fall.2025.python.group.c.final.project/
 │
 ├── manage.py
 ├── requirements.txt
 ├── run_all_extractors.py
-├── .venv/
 │
 ├── config/
 │   ├── __init__.py
@@ -28,42 +52,94 @@ fall.2025.python.group.c.final.project/
 │   ├── extractor_insurance_car_naic.py
 │   └── extractor_insurance_home_nerd_wallet.py
 │
+├── utils/
+│   ├── clean_home_insurance.py
+│   ├── state_mapping.py
+│   ├── time_normalization.py
+│   └── value_normalization.py
+│
 ├── data/
-│   ├── noaa_weather.csv
-│   ├── fema_weather.csv
+│   ├── clean_naic_auto_insurance.csv
+│   ├── clean_nerdwallet_home.csv
+│   ├── clean_fema_weather.csv
+│   ├── clean_noaa_weather.csv
+│   ├── naic_auto_insurance.csv
 │   ├── nerdwallet_home.csv
-│   └── naic_auto_insurance.csv
+│   ├── fema_weather.csv
+│   └── noaa_weather.csv
 │
 ├── archive_files/
 │
 └── project overview/
 
-Running the Project Locally (macOS, Linux, Windows)
+--------------------------------------------------
+Data Overview
+--------------------------------------------------
+
+Auto Insurance
+• Source: NAIC
+• Coverage: 2018 through 2022
+• Used for trend analysis and premium indexing
+
+Home Insurance
+• Source: NerdWallet
+• Coverage: Single year national snapshot
+• Displayed as current year reference only
+
+FEMA Disaster Data
+• Source: FEMA Disaster Declarations
+• Used to compute annual disaster frequency by state
+• Combined with premium index to calculate composite risk score
+
+--------------------------------------------------
+Risk Score Methodology
+--------------------------------------------------
+
+Risk Score = 0.6 × Premium Index + 0.4 × Disaster Index
+
+• Premium Index compares a state's average premium to the national average
+• Disaster Index compares a state's disaster frequency to the national average
+• A score above 1.00 indicates above average risk
+
+--------------------------------------------------
+Running the Project Locally
+--------------------------------------------------
 
 1. Create and activate a virtual environment
 
-macOS / Linux
+macOS or Linux
 python3 -m venv .venv
 source .venv/bin/activate
 
 Windows
 python -m venv .venv
 .venv\Scripts\activate
- 
-2. Install project dependencies
-Run this in the project root:
+
+2. Install dependencies
+
 pip install -r requirements.txt
- 
-3. (Optional) Run all data extractors
-Refresh NOAA, FEMA, home insurance, and auto insurance datasets:
+
+3. Optional: Refresh all datasets
+
 python run_all_extractors.py
- 
+
 4. Run database migrations
+
 python manage.py migrate
- 
+
 5. Start the development server
+
 python manage.py runserver
- 
+
 6. Open the application
-Visit in your browser:
+
 http://127.0.0.1:8000
+
+--------------------------------------------------
+Notes
+--------------------------------------------------
+
+• Auto insurance supports multi year trend analysis
+• Home insurance data represents a single year snapshot
+• Year selection is disabled when Home insurance is selected
+• The application uses indexed values to avoid misleading scale effects
