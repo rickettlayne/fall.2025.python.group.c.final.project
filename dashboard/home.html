@@ -13,25 +13,69 @@
         body {
             background-color: #f5f7fb;
         }
+
+        /* Sidebar */
         .sidebar {
             min-height: 100vh;
             background-color: #1f2933;
-            color: white;
-            padding: 1.5rem 1rem;
+            color: #f8f9fa;
+            padding: 1.75rem 1.25rem;
         }
         .sidebar h2 {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            margin-bottom: 1.25rem;
+            font-weight: 600;
         }
         .sidebar label {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            opacity: 0.9;
         }
+
+        /* Main content */
         .main-title {
-            margin-top: 1rem;
-            margin-bottom: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
         }
+
+        .card {
+            border-radius: 0.5rem;
+        }
+
         .card-title {
             font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 2.1rem;
+            font-weight: 600;
+            line-height: 1.1;
+        }
+
+        /* Table styling */
+        .table-container {
+            max-height: 420px;
+            overflow-y: auto;
+            border: 1px solid #e3e6ea;
+            border-radius: 0.5rem;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+            font-size: 0.85rem;
+        }
+
+        .table td {
+            font-size: 0.85rem;
+        }
+
+        /* Subtle section spacing */
+        .section-divider {
+            margin-top: 2rem;
         }
     </style>
 </head>
@@ -45,6 +89,8 @@
             <h2>Filters</h2>
 
             <form method="get">
+
+                <!-- Year -->
                 <div class="mb-3">
                     <label class="form-label">Year</label>
                     <select class="form-select" name="year" onchange="this.form.submit()">
@@ -57,6 +103,7 @@
                     </select>
                 </div>
 
+                <!-- State -->
                 <div class="mb-3">
                     <label class="form-label">State</label>
                     <select class="form-select" name="state" onchange="this.form.submit()">
@@ -71,58 +118,103 @@
             </form>
         </div>
 
-        <!-- Main -->
+        <!-- Main Content -->
         <div class="col-md-9 p-4">
-            <h1 class="main-title">Weather & Insurance Dashboard</h1>
 
-            <!-- Charts -->
-            <div class="row gy-3 mt-2">
+            <h1 class="main-title">Weather & Insurance Risk Dashboard</h1>
+            <p class="text-muted mb-3">
+                Interactive analysis of auto insurance premiums and FEMA disaster exposure by state.
+            </p>
 
-                <div class="col-md-6">
-                    <div class="card shadow-sm">
+            <!-- Top Metrics -->
+            <div class="row gy-3">
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
                         <div class="card-body">
-                            <h5 class="card-title">
-                                State vs National Premium Trend
-                            </h5>
-                            {{ trend_chart|safe }}
+                            <h5 class="card-title">Selected State</h5>
+                            <div class="metric-value">{{ selected_state }}</div>
+                            <small class="text-muted">Active selection</small>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Selected Year</h5>
+                            <div class="metric-value">{{ selected_year }}</div>
+                            <small class="text-muted">Analysis year</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Composite Risk Score</h5>
+                            <div class="metric-value">{{ risk_score }}</div>
+                            <small class="text-muted">
+                                Premium index and FEMA disaster exposure
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="row section-divider">
+                <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">
-                                State Comparison – {{ selected_year }}
-                            </h5>
+                            <h5 class="card-title">State vs National Premium Trend</h5>
+                            {{ trend_chart|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison + Map -->
+            <div class="row section-divider gy-3">
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">State Premium Index</h5>
+                            <p class="text-muted mb-2">
+                                Values above 1.00 indicate higher than national average premiums.
+                            </p>
                             {{ state_bar_chart|safe }}
                         </div>
                     </div>
                 </div>
 
-            </div>
-
-            <!-- US MAP -->
-            <div class="row gy-3 mt-4">
-                <div class="col-12">
-                    <div class="card shadow-sm">
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
                         <div class="card-body">
-                            <h5 class="card-title">
-                                United States Premium Map – {{ selected_year }}
-                            </h5>
+                            <h5 class="card-title">Composite Risk Map</h5>
                             {{ us_map|safe }}
                         </div>
                     </div>
                 </div>
+
             </div>
 
-            <!-- Data Preview -->
-            <div class="row gy-3 mt-4">
+            <!-- Data Table -->
+            <div class="row section-divider">
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">NAIC Data Preview</h5>
-                            {{ naic_preview|safe }}
+                            <h5 class="card-title">NAIC Auto Insurance Data</h5>
+                            <p class="text-muted mb-2">
+                                Average annual auto insurance premiums by state and year, shown in billions USD.
+                            </p>
+
+                            <div class="table-container">
+                                {{ naic_preview|safe }}
+                            </div>
+
                         </div>
                     </div>
                 </div>
