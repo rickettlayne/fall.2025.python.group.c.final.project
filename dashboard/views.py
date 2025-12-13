@@ -1,43 +1,39 @@
 from django.shortcuts import render
+from django.conf import settings
 import pandas as pd
 import os
-from django.conf import settings
 import plotly.express as px
+import numpy as np
 
 
 def home(request):
     # ---------------------------------------------------
-    # Load datasets
+    # LOAD DATA
     # ---------------------------------------------------
     naic_path = os.path.join(settings.BASE_DIR, "data", "clean_naic_auto_insurance.csv")
     fema_path = os.path.join(settings.BASE_DIR, "data", "fema_weather.csv")
 
     df_naic = pd.read_csv(naic_path)
-    df_naic = df_naic[df_naic["state"].notna()]
     df_fema = pd.read_csv(fema_path, low_memory=False)
+
+    # Remove invalid state rows
+    df_naic = df_naic[
+        df_naic["state"].notna() &
+        (df_naic["state"].str.len() == 2)
+    ]
 
     # ---------------------------------------------------
     # NORMALIZE FEMA DATA
     # ---------------------------------------------------
-    # Expect a declaration date column
-    if "declarationDate" not in df_fema.columns:
-        raise ValueError("FEMA file missing declarationDate column")
-
     df_fema["declarationDate"] = pd.to_datetime(
         df_fema["declarationDate"],
         errors="coerce"
     )
-
     df_fema["year"] = df_fema["declarationDate"].dt.year
 
-    # Normalize state column
-    if "state" not in df_fema.columns:
-        if "stateCode" in df_fema.columns:
-            df_fema["state"] = df_fema["stateCode"]
-        else:
-            raise ValueError("FEMA file missing state column")
+    if "state" not in df_fema.columns and "stateCode" in df_fema.columns:
+        df_fema["state"] = df_fema["stateCode"]
 
-    # Count disasters by state and year
     fema_counts = (
         df_fema
         .dropna(subset=["year"])
@@ -47,41 +43,43 @@ def home(request):
     )
 
     # ---------------------------------------------------
-    # Dimensions
+    # FILTER DIMENSIONS
     # ---------------------------------------------------
-    states = sorted(df_naic["state"].dropna().unique().tolist())
     years = list(range(2018, 2023))
+    states = sorted(df_naic["state"].unique().tolist())
 
-    selected_state = request.GET.get("state", states[0])
     selected_year = int(request.GET.get("year", years[-1]))
+    selected_state = request.GET.get("state", states[0])
 
     # ---------------------------------------------------
-    # STATE vs NATIONAL TREND
+    # STATE vs NATIONAL TREND (INDEXED)
     # ---------------------------------------------------
-    national_trend = [df_naic[f"avg_{y}"].mean() for y in years]
+    national_raw = [df_naic[f"avg_{y}"].mean() for y in years]
     state_row = df_naic[df_naic["state"] == selected_state].iloc[0]
-    state_trend = [state_row[f"avg_{y}"] for y in years]
+    state_raw = [state_row[f"avg_{y}"] for y in years]
+
+    national_trend = [v / national_raw[0] for v in national_raw]
+    state_trend = [v / state_raw[0] for v in state_raw]
 
     trend_df = pd.DataFrame({
         "Year": years + years,
-        "Average Premium": state_trend + national_trend,
+        "Premium Index": state_trend + national_trend,
         "Type": [selected_state] * len(years) + ["National Avg"] * len(years)
     })
 
     trend_fig = px.line(
         trend_df,
         x="Year",
-        y="Average Premium",
+        y="Premium Index",
         color="Type",
         markers=True,
-        title=f"{selected_state} vs National Auto Insurance Premium Trend"
+        title=f"{selected_state} vs National Premium Trend (Indexed)"
     )
 
     trend_fig.update_layout(
         xaxis_title="Year",
-        yaxis_title="Average Premium (USD)",
-        yaxis_tickprefix="$",
-        yaxis_tickformat=",.0f",
+        yaxis_title="Premium Index (2018 = 1.00)",
+        yaxis_tickformat=".2f",
         template="plotly_white",
         legend_title_text=""
     )
@@ -89,23 +87,20 @@ def home(request):
     trend_chart = trend_fig.to_html(full_html=False)
 
     # ---------------------------------------------------
-    # PREMIUM INDEX
+    # PREMIUM + FEMA MERGE
     # ---------------------------------------------------
     year_col = f"avg_{selected_year}"
 
-    index_df = df_naic[["state", year_col]].rename(
+    premium_df = df_naic[["state", year_col]].rename(
         columns={year_col: "Average Premium"}
     )
 
-    national_avg = index_df["Average Premium"].mean()
-    index_df["Premium Index"] = index_df["Average Premium"] / national_avg
+    national_avg = premium_df["Average Premium"].mean()
+    premium_df["Premium Index"] = premium_df["Average Premium"] / national_avg
 
-    # ---------------------------------------------------
-    # FEMA DISASTER INDEX
-    # ---------------------------------------------------
     fema_year = fema_counts[fema_counts["year"] == selected_year]
 
-    merged_df = index_df.merge(
+    merged_df = premium_df.merge(
         fema_year,
         on="state",
         how="left"
@@ -113,33 +108,42 @@ def home(request):
 
     merged_df["disaster_count"] = merged_df["disaster_count"].fillna(0)
 
-    national_disaster_avg = merged_df["disaster_count"].mean()
-
+    disaster_avg = merged_df["disaster_count"].mean()
     merged_df["Disaster Index"] = (
-        merged_df["disaster_count"] / national_disaster_avg
-        if national_disaster_avg > 0
-        else 0
+        merged_df["disaster_count"] / disaster_avg if disaster_avg > 0 else 0
     )
 
     # ---------------------------------------------------
-    # COMPOSITE RISK SCORE
+    # COMPOSITE RISK SCORE (TRUE VALUE)
     # ---------------------------------------------------
     merged_df["Risk Score"] = (
         0.6 * merged_df["Premium Index"] +
         0.4 * merged_df["Disaster Index"]
     )
 
-    # ---------------------------------------------------
-    # STATE PREMIUM INDEX CHART
-    # ---------------------------------------------------
-    chart_df = merged_df.sort_values("Premium Index", ascending=False)
+    selected_risk = round(
+        merged_df.loc[
+            merged_df["state"] == selected_state, "Risk Score"
+        ].values[0],
+        2
+    )
 
-    chart_df["Highlight"] = chart_df["state"].apply(
+    # ---------------------------------------------------
+    # MAP-ONLY LOG SCALE (FOR VISUAL HONESTY)
+    # ---------------------------------------------------
+    merged_df["Risk Score (Map)"] = np.log1p(merged_df["Risk Score"])
+
+    # ---------------------------------------------------
+    # STATE PREMIUM INDEX BAR CHART
+    # ---------------------------------------------------
+    bar_df = merged_df.sort_values("Premium Index", ascending=True)
+
+    bar_df["Highlight"] = bar_df["state"].apply(
         lambda x: selected_state if x == selected_state else "Other"
     )
 
-    index_fig = px.bar(
-        chart_df,
+    bar_fig = px.bar(
+        bar_df,
         x="Premium Index",
         y="state",
         orientation="h",
@@ -148,7 +152,7 @@ def home(request):
             selected_state: "#d62728",
             "Other": "#1f77b4"
         },
-        title=f"State Auto Insurance Premium Index ({selected_year})",
+        title=f"State Premium Index ({selected_year})",
         hover_data={
             "Average Premium": ":$,.0f",
             "Premium Index": ":.2f",
@@ -157,72 +161,66 @@ def home(request):
         }
     )
 
-    index_fig.add_vline(
+    bar_fig.add_vline(
         x=1.0,
         line_dash="dash",
         line_color="black",
         annotation_text="National Avg"
     )
 
-    index_fig.update_layout(
+    bar_fig.update_layout(
         xaxis_title="Premium Index (1.00 = National Average)",
         yaxis_title="State",
         template="plotly_white",
         legend_title_text=""
     )
 
-    state_comparison_chart = index_fig.to_html(full_html=False)
+    state_bar_chart = bar_fig.to_html(full_html=False)
 
     # ---------------------------------------------------
-    # US MAP (RISK SCORE)
+    # US MAP (LOG-SCALED COLOR, TRUE VALUE ON HOVER)
     # ---------------------------------------------------
     map_fig = px.choropleth(
         merged_df,
         locations="state",
         locationmode="USA-states",
-        color="Risk Score",
+        color="Risk Score (Map)",
         scope="usa",
-        color_continuous_scale="Reds",
-        title=f"Composite Insurance & Disaster Risk Score ({selected_year})"
+        color_continuous_scale=px.colors.sequential.Turbo,
+        title=f"Composite Risk Score by State ({selected_year})",
+        hover_data={
+            "Risk Score": ":.2f"
+        }
+    )
+
+    map_fig.update_coloraxes(
+        colorbar=dict(
+            title="Relative Risk (Log Scaled)",
+            tickformat=".2f"
+        )
     )
 
     map_fig.update_layout(
-        coloraxis_colorbar=dict(
-            title="Risk Score",
-            tickformat=".2f"
-        ),
         template="plotly_white"
     )
 
     us_map = map_fig.to_html(full_html=False)
 
     # ---------------------------------------------------
-    # RISK SCORE CARD
-    # ---------------------------------------------------
-    selected_risk = (
-        merged_df[merged_df["state"] == selected_state]["Risk Score"]
-        .values[0]
-    )
-
-    # ---------------------------------------------------
-    # TABLE PREVIEW (ALL STATES, SORTED, FORMATTED)
+    # TABLE (ALL STATES, SORTED, FORMATTED)
     # ---------------------------------------------------
     rename_map = {f"avg_{y}": str(y) for y in years}
     display_df = df_naic.rename(columns=rename_map)
-
     display_df = display_df[["state"] + [str(y) for y in years]]
 
-    # Convert to billions and format
     for y in years:
         display_df[str(y)] = display_df[str(y)] / 1_000_000_000
 
-    # Sort by selected year descending
     display_df = display_df.sort_values(
         by=str(selected_year),
         ascending=False
     )
 
-    # Add National Average row
     national_row = {"state": "National Avg"}
     for y in years:
         national_row[str(y)] = display_df[str(y)].mean()
@@ -232,11 +230,9 @@ def home(request):
         ignore_index=True
     )
 
-    # Format display values
     for y in years:
         display_df[str(y)] = display_df[str(y)].map(lambda x: f"${x:,.2f}B")
 
-    # Capitalize State header
     display_df = display_df.rename(columns={"state": "State"})
 
     table_html = display_df.to_html(
@@ -245,7 +241,6 @@ def home(request):
         escape=False
     )
 
-    # Align headers and cells
     table_html = (
         table_html
         .replace("<th>", "<th style='text-align:right;'>")
@@ -253,7 +248,6 @@ def home(request):
         .replace("<td>", "<td style='text-align:right;'>")
     )
 
-    # Left-align State column cells
     for s in display_df["State"].unique():
         table_html = table_html.replace(
             f"<td>{s}</td>",
@@ -268,11 +262,11 @@ def home(request):
         "years": years,
         "selected_state": selected_state,
         "selected_year": selected_year,
+        "risk_score": selected_risk,
         "trend_chart": trend_chart,
-        "state_bar_chart": state_comparison_chart,
+        "state_bar_chart": state_bar_chart,
         "us_map": us_map,
         "naic_preview": table_html,
-        "risk_score": round(selected_risk, 2)
     }
 
     return render(request, "home.html", context)
