@@ -102,38 +102,165 @@ Risk Score = 0.6 × Premium Index + 0.4 × Disaster Index
 • A score above 1.00 indicates above average risk
 
 --------------------------------------------------
-Running the Project Locally
+Quickstart Demo (Recommended)
 --------------------------------------------------
 
-1. Create and activate a virtual environment
+This project is a Django-based interactive dashboard that analyzes U.S. insurance premiums
+and federally declared disaster activity.
 
-macOS or Linux
-python3 -m venv .venv
-source .venv/bin/activate
+The demo script runs the full flow:
+A) (If needed) Download/refresh raw datasets (extractors)
+B) (If needed) Generate cleaned datasets (clean_all_data.py) used by the dashboard
+C) Run Django migrations
+D) Start the Django server
 
-Windows
-python -m venv .venv
-.venv\Scripts\activate
-
-2. Install dependencies
-
-pip install -r requirements.txt
-
-3. Optional: Refresh all datasets
-
-python run_all_extractors.py
-
-4. Run database migrations
-
-python manage.py migrate
-
-5. Start the development server
-
-python manage.py runserver
-
-6. Open the application
-
+Then open:
 http://127.0.0.1:8000
+
+--------------------------------------------------
+QuickStart Demo Setup (Cross-Platform, No Activation Required)
+--------------------------------------------------
+
+Recommended: use the "no activation" commands below to avoid OS/shell differences.
+
+Windows note: If `py` is not available, use `python` instead.
+
+1) Create a virtual environment
+
+macOS / Linux
+python3 -m venv .venv
+
+Windows (PowerShell)
+py -m venv .venv
+
+2) Install dependencies (no activation required)
+
+macOS / Linux
+./.venv/bin/python -m pip install -r requirements.txt
+
+Windows (PowerShell)
+.\.venv\Scripts\python -m pip install -r requirements.txt
+
+3) Run the demo (no activation required)
+
+macOS / Linux
+./.venv/bin/python demo.py
+
+Windows (PowerShell)
+.\.venv\Scripts\python demo.py
+
+Then open:
+http://127.0.0.1:8000
+--------------------------------------------------
+Demo Options
+--------------------------------------------------
+
+Fast mode (default)
+- If cleaned files already exist in /data (clean_*.csv), demo.py will skip re-scraping and run quickly.
+
+Force refresh (slow, downloads data again)
+- Use this if you want the newest datasets or if you are running for the first time.
+
+macOS / Linux
+./.venv/bin/python demo.py --refresh
+
+Windows (PowerShell)
+.\.venv\Scripts\python demo.py --refresh
+
+Offline mode (no downloads)
+- Use this if you are offline or the data sources are unavailable.
+- Requires local data to already exist:
+  - either clean_*.csv (preferred), or raw *.csv so clean_all_data.py can generate clean files.
+
+macOS / Linux
+./.venv/bin/python demo.py --offline
+
+Windows (PowerShell)
+.\.venv\Scripts\python demo.py --offline
+
+--------------------------------------------------
+Running Manually (Step-by-Step, No Activation)
+--------------------------------------------------
+
+1) Run all extractors (downloads raw datasets into /data)
+
+macOS / Linux
+./.venv/bin/python run_all_extractors.py
+
+Windows (PowerShell)
+.\.venv\Scripts\python run_all_extractors.py
+
+2) Generate cleaned datasets (creates clean_*.csv in /data)
+
+macOS / Linux
+./.venv/bin/python clean_all_data.py
+
+Windows (PowerShell)
+.\.venv\Scripts\python clean_all_data.py
+
+3) Run database migrations
+
+macOS / Linux
+./.venv/bin/python manage.py migrate
+
+Windows (PowerShell)
+.\.venv\Scripts\python manage.py migrate
+
+4) Start the server
+
+macOS / Linux
+./.venv/bin/python manage.py runserver
+
+Windows (PowerShell)
+.\.venv\Scripts\python manage.py runserver
+
+5) Open:
+http://127.0.0.1:8000
+
+--------------------------------------------------
+Running in VS Code
+--------------------------------------------------
+
+1) Open the project folder in VS Code
+2) Select interpreter:
+   - Press Ctrl+Shift+P (Mac: Cmd+Shift+P)
+   - Type: Python: Select Interpreter
+   - Choose:
+       Windows: .venv\Scripts\python.exe
+       Mac/Linux: .venv/bin/python
+
+3) Open the VS Code terminal and run:
+
+python -m pip install -r requirements.txt
+python demo.py
+
+--------------------------------------------------
+Troubleshooting (Common)
+--------------------------------------------------
+
+Port 8000 already in use
+- Start on a different port:
+
+macOS / Linux
+./.venv/bin/python manage.py runserver 8001
+
+Windows (PowerShell)
+.\.venv\Scripts\python manage.py runserver 8001
+
+Then open:
+http://127.0.0.1:8001
+
+
+VS Code says "ModuleNotFoundError" or imports fail
+- Ensure VS Code is using the workspace virtual environment:
+  Python: Select Interpreter -> .venv
+- Then re-install deps into that environment:
+
+Windows (PowerShell)
+.\.venv\Scripts\python -m pip install -r requirements.txt
+
+macOS / Linux
+./.venv/bin/python -m pip install -r requirements.txt
 
 --------------------------------------------------
 Notes

@@ -11,3 +11,6 @@ __pycache__/
 
 # Django local DB
 db.sqlite3
+
+# Generated datasets (do not commit)
+data/*.csv
