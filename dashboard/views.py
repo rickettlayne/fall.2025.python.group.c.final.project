@@ -421,28 +421,7 @@ def home(request):
     except Exception:
         fema_breakdown_chart = None
 
-    # ---------------------------------------------------
-    # CORRELATION SCATTER: DISASTER vs PREMIUM INDEX
-    # ---------------------------------------------------
-    correlation_chart = None
-    try:
-        corr_df = merged_df.dropna(subset=["disaster_count", "Premium Index"]).copy()
-        if not corr_df.empty:
-            corr_fig = px.scatter(
-                corr_df,
-                x="disaster_count",
-                y="Premium Index",
-                hover_name="state",
-                title="Relation between disaster frequency and premium index",
-            )
-            corr_fig.update_layout(
-                xaxis_title="Total FEMA disasters",
-                yaxis_title="Premium Index",
-                template="plotly_white",
-            )
-            correlation_chart = corr_fig.to_html(full_html=False)
-    except Exception:
-        correlation_chart = None
+
 
     # ---------------------------------------------------
     # STATE BAR CHART (PREMIUM INDEX)
@@ -516,6 +495,39 @@ def home(request):
             "Weather Index",
         ]
     ]
+    # ---------------------------------------------------
+    # CORRELATION SCATTER (DISASTER VS PREMIUM)
+    # ---------------------------------------------------
+    correlation_chart = None
+
+    if not merged_df.empty:
+        scatter_fig = px.scatter(
+            merged_df,
+            x="disaster_count",
+            y="Premium Index",
+            color="Risk Score",
+            hover_name="state",
+            size="Risk Score",
+            labels={
+                "disaster_count": "Average Annual Disasters",
+                "Premium Index": "Premium Index",
+                "Risk Score": "Composite Risk Score"
+            },
+            title="Relationship Between Disaster Activity and Insurance Premiums",
+            color_continuous_scale=px.colors.sequential.Blues,
+            template="plotly_white"
+        )
+
+        scatter_fig.update_layout(
+            xaxis_title="Average Annual FEMA Disasters",
+            yaxis_title="Premium Index (1.00 = National Average)",
+            coloraxis_colorbar=dict(
+                title="Risk Score",
+                tickformat=".2f"
+            )
+        )
+
+        correlation_chart = scatter_fig.to_html(full_html=False)
 
     naic_preview = table_df.to_html(
         index=False,

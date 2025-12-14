@@ -41,6 +41,7 @@
             max-height: 420px;
             overflow-y: auto;
         }
+
         table th,
         table td {
             vertical-align: middle;
@@ -82,21 +83,25 @@
                 <!-- Policy Period -->
                 <div class="mb-3">
                     <label class="form-label">Policy Period</label>
-                    <select class="form-select"
-                            name="year"
-                            onchange="this.form.submit()"
-                            {% if selected_insurance == "Home" %}disabled{% endif %}>
-                        {% for year in years %}
-                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    </select>
 
                     {% if selected_insurance == "Home" %}
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="Current Year (2025)"
+                            disabled
+                        >
                         <small class="text-light">
-                            Home insurance data reflects the current year only
+                            Home insurance data represents a current-year snapshot
                         </small>
+                    {% else %}
+                        <select class="form-select" name="year" onchange="this.form.submit()">
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                                    {{ year }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     {% endif %}
                 </div>
 
@@ -125,7 +130,7 @@
                 Analysis of United States {{ selected_insurance|lower }} insurance premiums, weather exposure, and FEMA disaster activity by state.
             </p>
 
-            <!-- METRICS CARDS -->
+            <!-- METRICS -->
             <div class="row gy-3 mt-3">
 
                 <div class="col-md-4">
@@ -153,7 +158,7 @@
                             </div>
                             <small class="text-muted">
                                 {% if selected_insurance == "Home" %}
-                                    Single year snapshot
+                                    Single-year snapshot
                                 {% else %}
                                     Selected policy year
                                 {% endif %}
@@ -170,7 +175,7 @@
                             </h5>
                             <div class="metric-value">{{ risk_score }}</div>
                             <small class="text-muted">
-                                Composite of premiums, disaster severity, and NOAA weather index
+                                Composite of premiums, FEMA disasters, and NOAA weather patterns
                             </small>
                         </div>
                     </div>
@@ -178,84 +183,42 @@
 
             </div>
 
-            <!-- AUTO PREMIUM TREND -->
+            <!-- AUTO TREND -->
             {% if selected_insurance == "Auto" and trend_chart %}
             <div class="row gy-3 mt-4">
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                Auto premium trend, state vs national index
+                                Auto Insurance Premium Trend, State vs National Index
                             </h5>
                             <p class="text-muted mb-2">
-                                Indexed to the base year so a value of 1 represents the base year premium level.
+                                Indexed to base year where 1.00 represents baseline premium levels.
                             </p>
                             {{ trend_chart|safe }}
                         </div>
                     </div>
                 </div>
             </div>
-            {% elif selected_insurance == "Home" %}
+            {% else %}
             <div class="row gy-3 mt-4">
                 <div class="col-12">
                     <div class="alert alert-info">
-                        Home insurance premiums are represented as a current year snapshot. Multi year trend analysis is not available for this data source.
+                        Home insurance premiums represent a current-year snapshot. Trend analysis is not applicable.
                     </div>
                 </div>
             </div>
             {% endif %}
 
-            <!-- WEATHER TREND AND FEMA MIX -->
+            <!-- BAR + MAP -->
             <div class="row gy-3 mt-4">
 
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                NOAA weather trend for {{ selected_state }}
+                                {{ selected_insurance }} Premium Index by State
                             </h5>
-                            {% if weather_trend_chart %}
-                                {{ weather_trend_chart|safe }}
-                            {% else %}
-                                <p class="text-muted mb-0">
-                                    NOAA trend data is not available for this state in the current dataset.
-                                </p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                FEMA disaster mix for {{ selected_state }}
-                            </h5>
-                            {% if fema_breakdown_chart %}
-                                {{ fema_breakdown_chart|safe }}
-                            {% else %}
-                                <p class="text-muted mb-0">
-                                    No FEMA disaster records found for this state in the current dataset.
-                                </p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- PREMIUM INDEX AND RISK MAP -->
-            <div class="row gy-3 mt-4">
-
-                <div class="col-md-6">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                {{ selected_insurance }} premium index by state
-                            </h5>
-                            <p class="text-muted">
-                                Values above 1 indicate states where premiums sit above the national average.
-                            </p>
                             {{ state_bar_chart|safe }}
                         </div>
                     </div>
@@ -265,11 +228,8 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                Composite risk map
+                                Composite Risk Map
                             </h5>
-                            <p class="text-muted">
-                                Combined view of premium pressure, FEMA disaster severity, and NOAA weather profile.
-                            </p>
                             {{ us_map|safe }}
                         </div>
                     </div>
@@ -277,14 +237,18 @@
 
             </div>
 
-            <!-- CORRELATION SCATTER -->
+                        <!-- CORRELATION SCATTER -->
             <div class="row gy-3 mt-4">
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                Relation between disaster activity and premium index
+                                Relationship Between Disaster Activity and Insurance Premiums
                             </h5>
+                            <p class="text-muted mb-2">
+                                Each point represents a state. Higher disaster frequency generally correlates with higher insurance premiums.
+                            </p>
+
                             {% if correlation_chart %}
                                 {{ correlation_chart|safe }}
                             {% else %}
@@ -303,10 +267,10 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                {{ selected_insurance }} insurance risk detail by state
+                                {{ selected_insurance }} Insurance Risk Detail by State
                             </h5>
                             <p class="text-muted">
-                                Sorted from highest to lowest composite risk. Risk combines premium index, FEMA severity, and NOAA weather index.
+                                Sorted from highest to lowest composite risk.
                             </p>
 
                             <div class="table-container">
