@@ -108,10 +108,12 @@ Running the Project Locally
 1. Create and activate a virtual environment
 
 macOS or Linux
+
 python3 -m venv .venv
 source .venv/bin/activate
 
 Windows
+
 python -m venv .venv
 .venv\Scripts\activate
 
