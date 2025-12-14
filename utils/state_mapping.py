@@ -1,3 +1,5 @@
+# utils/state_mapping.py
+
 STATE_MAP = {
     "ALABAMA": "AL", "AL": "AL",
     "ALASKA": "AK", "AK": "AK",
@@ -7,6 +9,7 @@ STATE_MAP = {
     "COLORADO": "CO", "CO": "CO",
     "CONNECTICUT": "CT", "CT": "CT",
     "DELAWARE": "DE", "DE": "DE",
+    "DISTRICT OF COLUMBIA": "DC", "DC": "DC",
     "FLORIDA": "FL", "FL": "FL",
     "GEORGIA": "GA", "GA": "GA",
     "HAWAII": "HI", "HI": "HI",
@@ -49,10 +52,24 @@ STATE_MAP = {
     "WEST VIRGINIA": "WV", "WV": "WV",
     "WISCONSIN": "WI", "WI": "WI",
     "WYOMING": "WY", "WY": "WY",
+    # anything like Countrywide will map to None
 }
 
 def normalize_state(value):
-    if not value:
+    """
+    Convert messy state text to two letter codes.
+    Examples:
+        Alabama → AL
+        texas → TX
+        TX → TX
+        Countrywide → None
+    """
+    if value is None:
         return None
-    key = value.strip().upper().replace(".", "")
+
+    key = str(value).strip().upper().replace(".", "")
+    # special case for Countrywide style rows
+    if "COUNTRYWIDE" in key:
+        return None
+
     return STATE_MAP.get(key)

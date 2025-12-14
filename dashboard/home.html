@@ -86,22 +86,27 @@
                 <!-- Policy Year -->
                 <div class="mb-3">
                     <label class="form-label">Policy Period</label>
-                    <select class="form-select"
-                            name="year"
-                            onchange="this.form.submit()"
-                            {% if selected_insurance == "Home" %}disabled{% endif %}>
-                        {% for year in years %}
-                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <!-- Policy Period -->
+                    <div class="mb-3">
+                        <label class="form-label">Policy Period</label>
 
-                    {% if selected_insurance == "Home" %}
-                        <small class="text-light">
-                            Home insurance data reflects the current year only
-                        </small>
-                    {% endif %}
+                        {% if selected_insurance == "Home" %}
+                            <!-- Show static label instead of dropdown -->
+                            <input class="form-control" value="Current (2025)" disabled>
+                            <small class="text-light">Home insurance data reflects the current year only</small>
+
+                        {% else %}
+                            <!-- Auto dropdown -->
+                            <select class="form-select" name="year" onchange="this.form.submit()">
+                                {% for year in years %}
+                                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+
                 </div>
 
                 <!-- State -->

@@ -7,7 +7,7 @@ import plotly.express as px
 
 def home(request):
     # ---------------------------------------------------
-    # LOAD DATA
+    # LOAD CLEANED DATASETS
     # ---------------------------------------------------
     base_dir = settings.BASE_DIR
 
@@ -16,7 +16,7 @@ def home(request):
     df_fema = pd.read_csv(os.path.join(base_dir, "data", "clean_fema_weather.csv"), low_memory=False)
 
     # ---------------------------------------------------
-    # NORMALIZE INSURANCE SELECTION
+    # INSURANCE TYPE (Auto or Home)
     # ---------------------------------------------------
     insurance_types = ["Auto", "Home"]
     selected_insurance = request.GET.get("insurance", "Auto").capitalize()
@@ -25,19 +25,21 @@ def home(request):
 
     # ---------------------------------------------------
     # CLEAN STATE CODES
+    # Ensure only 2-letter state codes are used
     # ---------------------------------------------------
     def clean_states(df):
-        return df[
-            df["state"].notna() &
-            (df["state"].astype(str).str.len() == 2)
-        ].copy()
+        df = df[df["state"].notna()]
+        df["state"] = df["state"].astype(str).str.strip().str.upper()
+        return df[df["state"].str.len() == 2].copy()
 
     df_auto = clean_states(df_auto)
     df_home = clean_states(df_home)
     df_fema = clean_states(df_fema)
 
     # ---------------------------------------------------
-    # YEARS AND STATES
+    # YEAR HANDLING
+    # Auto = selectable 2018–2022
+    # Home = always "Current (2025)"
     # ---------------------------------------------------
     auto_years = list(range(2018, 2023))
     selected_year = request.GET.get("year", auto_years[-1])
@@ -46,13 +48,13 @@ def home(request):
         selected_year = int(selected_year)
         states = sorted(df_auto["state"].unique().tolist())
     else:
-        selected_year = "Current"
+        selected_year = "Current (2025)"     # UI label only
         states = sorted(df_home["state"].unique().tolist())
 
     selected_state = request.GET.get("state", states[0])
 
     # ---------------------------------------------------
-    # BUILD INSURANCE DATA (ALWAYS DEFINES df_ins)
+    # BUILD INSURANCE DATAFRAME (df_ins)
     # ---------------------------------------------------
     if selected_insurance == "Auto":
         year_col = f"avg_{selected_year}"
@@ -64,33 +66,31 @@ def home(request):
             .agg({"Average Premium": "mean"})
         )
 
-    else:
+    else:  # HOME
         df_ins = (
-            df_home
-            .rename(columns={"avg_annual_usd": "Average Premium"})
+            df_home.rename(columns={"avg_annual_usd": "Average Premium"})
             .groupby("state", as_index=False)
             .agg({"Average Premium": "mean"})
         )
 
     # ---------------------------------------------------
-    # FEMA NORMALIZATION (ONE ROW PER STATE)
+    # FEMA DISASTER COUNTS (ONE PER STATE)
     # ---------------------------------------------------
     df_fema["declarationDate"] = pd.to_datetime(df_fema["declarationDate"], errors="coerce")
 
     fema_counts = (
-        df_fema
-        .groupby("state", as_index=False)
+        df_fema.groupby("state", as_index=False)
         .agg(disaster_count=("state", "count"))
     )
 
     # ---------------------------------------------------
-    # MERGE
+    # MERGE INSURANCE + FEMA
     # ---------------------------------------------------
     merged_df = df_ins.merge(fema_counts, on="state", how="left")
     merged_df["disaster_count"] = merged_df["disaster_count"].fillna(0)
 
     # ---------------------------------------------------
-    # INDEX + RISK
+    # BUILD INDEXES + FINAL RISK SCORE
     # ---------------------------------------------------
     merged_df["Premium Index"] = merged_df["Average Premium"] / merged_df["Average Premium"].mean()
 
@@ -110,17 +110,16 @@ def home(request):
     )
 
     # ---------------------------------------------------
-    # TREND CHART (AUTO ONLY, INDEXED, YEAR SAFE)
+    # AUTO TREND CHART (INDEXED TO 2018)
     # ---------------------------------------------------
     trend_chart = None
 
     if selected_insurance == "Auto":
-        base_year = auto_years[0]
+        base_year = auto_years[0]  # 2018 baseline
 
-        # Build trend rows explicitly
         trend_rows = []
 
-        # National baseline
+        # National trend
         nat_base = df_auto[f"avg_{base_year}"].mean()
 
         for y in auto_years:
@@ -130,7 +129,7 @@ def home(request):
                 "Series": "National Avg"
             })
 
-        # State baseline
+        # State trend
         state_row = df_auto[df_auto["state"] == selected_state].iloc[0]
         state_base = state_row[f"avg_{base_year}"]
 
@@ -141,11 +140,7 @@ def home(request):
                 "Series": selected_state
             })
 
-        trend_df = pd.DataFrame(trend_rows)
-
-        # Enforce correct ordering and type
-        trend_df["Year"] = trend_df["Year"].astype(int)
-        trend_df = trend_df.sort_values("Year")
+        trend_df = pd.DataFrame(trend_rows).sort_values("Year")
 
         trend_fig = px.line(
             trend_df,
@@ -153,18 +148,17 @@ def home(request):
             y="Premium Index",
             color="Series",
             markers=True,
-            title="Auto Insurance Premium Trend (Indexed to Base Year = 1.00)"
+            title="Auto Insurance Premium Trend (Indexed to 2018 = 1.00)"
         )
 
         trend_fig.add_hline(
             y=1.0,
             line_dash="dash",
-            annotation_text=f"{base_year} Baseline"
+            annotation_text="2018 Baseline"
         )
 
         trend_fig.update_layout(
             xaxis=dict(
-                type="linear",
                 tickmode="array",
                 tickvals=auto_years
             ),
@@ -189,7 +183,7 @@ def home(request):
     ).to_html(full_html=False)
 
     # ---------------------------------------------------
-    # MAP
+    # MAP (STATE RISK SCORE)
     # ---------------------------------------------------
     us_map = px.choropleth(
         merged_df,
@@ -202,7 +196,7 @@ def home(request):
     ).to_html(full_html=False)
 
     # ---------------------------------------------------
-    # TABLE
+    # TABLE (FINAL ORDER)
     # ---------------------------------------------------
     table_df = (
         merged_df
@@ -222,7 +216,7 @@ def home(request):
     ].to_html(index=False, classes="table table-striped table-sm")
 
     # ---------------------------------------------------
-    # CONTEXT
+    # RETURN PAGE
     # ---------------------------------------------------
     return render(request, "home.html", {
         "insurance_types": insurance_types,

@@ -1,9 +1,22 @@
-import re
+# utils/time_normalization.py
 
 def normalize_year(value):
+    """
+    Convert various year formats to int year.
+    Examples:
+        2019 → 2019
+        2019.0 → 2019
+        "2019 " → 2019
+        "2019 01 01" → 2019
+    """
     if value is None:
         return None
-    if isinstance(value, int):
-        return value
-    match = re.search(r"(19|20)\d{2}", str(value))
-    return int(match.group()) if match else None
+
+    s = str(value).strip()
+    if len(s) < 4:
+        return None
+
+    try:
+        return int(s[:4])
+    except ValueError:
+        return None
