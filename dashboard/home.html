@@ -41,19 +41,15 @@
             max-height: 420px;
             overflow-y: auto;
         }
-
-        /* ✅ TABLE ALIGNMENT FIX */
         table th,
         table td {
             vertical-align: middle;
             white-space: nowrap;
         }
-
         table th:not(:first-child),
         table td:not(:first-child) {
             text-align: center;
         }
-
         table th:first-child,
         table td:first-child {
             text-align: left;
@@ -83,30 +79,25 @@
                     </select>
                 </div>
 
-                <!-- Policy Year -->
+                <!-- Policy Period -->
                 <div class="mb-3">
                     <label class="form-label">Policy Period</label>
-                    <!-- Policy Period -->
-                    <div class="mb-3">
-                        <label class="form-label">Policy Period</label>
+                    <select class="form-select"
+                            name="year"
+                            onchange="this.form.submit()"
+                            {% if selected_insurance == "Home" %}disabled{% endif %}>
+                        {% for year in years %}
+                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
 
-                        {% if selected_insurance == "Home" %}
-                            <!-- Show static label instead of dropdown -->
-                            <input class="form-control" value="Current (2025)" disabled>
-                            <small class="text-light">Home insurance data reflects the current year only</small>
-
-                        {% else %}
-                            <!-- Auto dropdown -->
-                            <select class="form-select" name="year" onchange="this.form.submit()">
-                                {% for year in years %}
-                                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
-                                        {{ year }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        {% endif %}
-                    </div>
-
+                    {% if selected_insurance == "Home" %}
+                        <small class="text-light">
+                            Home insurance data reflects the current year only
+                        </small>
+                    {% endif %}
                 </div>
 
                 <!-- State -->
@@ -131,10 +122,10 @@
                 {{ selected_insurance }} Insurance Risk Dashboard
             </h1>
             <p class="text-muted">
-                Analysis of U.S. {{ selected_insurance|lower }} insurance premiums and FEMA disaster exposure by state.
+                Analysis of United States {{ selected_insurance|lower }} insurance premiums, weather exposure, and FEMA disaster activity by state.
             </p>
 
-            <!-- METRICS -->
+            <!-- METRICS CARDS -->
             <div class="row gy-3 mt-3">
 
                 <div class="col-md-4">
@@ -162,7 +153,7 @@
                             </div>
                             <small class="text-muted">
                                 {% if selected_insurance == "Home" %}
-                                    Single-year snapshot
+                                    Single year snapshot
                                 {% else %}
                                     Selected policy year
                                 {% endif %}
@@ -179,7 +170,7 @@
                             </h5>
                             <div class="metric-value">{{ risk_score }}</div>
                             <small class="text-muted">
-                                Composite of premiums and disaster exposure
+                                Composite of premiums, disaster severity, and NOAA weather index
                             </small>
                         </div>
                     </div>
@@ -187,32 +178,84 @@
 
             </div>
 
-            <!-- TREND (AUTO ONLY) -->
-            {% if selected_insurance == "Auto" %}
+            <!-- AUTO PREMIUM TREND -->
+            {% if selected_insurance == "Auto" and trend_chart %}
             <div class="row gy-3 mt-4">
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                Auto Insurance Premium Trend  
-                                State vs National Index
+                                Auto premium trend, state vs national index
                             </h5>
+                            <p class="text-muted mb-2">
+                                Indexed to the base year so a value of 1 represents the base year premium level.
+                            </p>
                             {{ trend_chart|safe }}
                         </div>
                     </div>
                 </div>
             </div>
+            {% elif selected_insurance == "Home" %}
+            <div class="row gy-3 mt-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        Home insurance premiums are represented as a current year snapshot. Multi year trend analysis is not available for this data source.
+                    </div>
+                </div>
+            </div>
             {% endif %}
 
-            <!-- BAR + MAP -->
+            <!-- WEATHER TREND AND FEMA MIX -->
             <div class="row gy-3 mt-4">
 
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                {{ selected_insurance }} Premium Index by State
+                                NOAA weather trend for {{ selected_state }}
                             </h5>
+                            {% if weather_trend_chart %}
+                                {{ weather_trend_chart|safe }}
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    NOAA trend data is not available for this state in the current dataset.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                FEMA disaster mix for {{ selected_state }}
+                            </h5>
+                            {% if fema_breakdown_chart %}
+                                {{ fema_breakdown_chart|safe }}
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    No FEMA disaster records found for this state in the current dataset.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PREMIUM INDEX AND RISK MAP -->
+            <div class="row gy-3 mt-4">
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                {{ selected_insurance }} premium index by state
+                            </h5>
+                            <p class="text-muted">
+                                Values above 1 indicate states where premiums sit above the national average.
+                            </p>
                             {{ state_bar_chart|safe }}
                         </div>
                     </div>
@@ -222,13 +265,36 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                {{ selected_insurance }} Composite Risk Map
+                                Composite risk map
                             </h5>
+                            <p class="text-muted">
+                                Combined view of premium pressure, FEMA disaster severity, and NOAA weather profile.
+                            </p>
                             {{ us_map|safe }}
                         </div>
                     </div>
                 </div>
 
+            </div>
+
+            <!-- CORRELATION SCATTER -->
+            <div class="row gy-3 mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                Relation between disaster activity and premium index
+                            </h5>
+                            {% if correlation_chart %}
+                                {{ correlation_chart|safe }}
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    Correlation chart is not available for the current selection.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TABLE -->
@@ -237,8 +303,11 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">
-                                {{ selected_insurance }} Insurance Premiums by State
+                                {{ selected_insurance }} insurance risk detail by state
                             </h5>
+                            <p class="text-muted">
+                                Sorted from highest to lowest composite risk. Risk combines premium index, FEMA severity, and NOAA weather index.
+                            </p>
 
                             <div class="table-container">
                                 {{ naic_preview|safe }}
@@ -249,7 +318,8 @@
                 </div>
             </div>
 
-        </div>
+        </div> <!-- end main content -->
+
     </div>
 </div>
 </body>
